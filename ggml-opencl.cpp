@@ -1539,7 +1539,7 @@ void ggml_cl_add(const struct ggml_tensor * src0, const struct ggml_tensor * src
     ggml_cl_add_f32(src0, src1, dst);
 }
 
-static void ggml_cl_mul_mat_f32(const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
+void ggml_cl_mul_mat_f32(const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
     const int64_t ne00 = src0->ne[0];
     const int64_t ne01 = src0->ne[1];
     const int64_t ne02 = src0->ne[2];

@@ -11,6 +11,8 @@
 #include <string.h> // memcpy
 #include <math.h>   // fabsf
 
+#include <stdio.h>  // printf
+
 #ifdef __cplusplus
 extern "C" {
 #endif

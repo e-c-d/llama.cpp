@@ -218,6 +218,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <stdio.h> // printf
+
 #define GGML_FILE_MAGIC   0x67676d6c // "ggml"
 #define GGML_FILE_VERSION 1
 
@@ -2301,6 +2303,18 @@ extern "C" {
     } ggml_type_traits_t;
 
     GGML_API ggml_type_traits_t ggml_internal_get_type_traits(enum ggml_type type);
+
+static inline void print_json_tensor(const struct ggml_tensor *t) {
+    if (!t) {
+        printf("null");
+        return;
+    }
+    printf("{\"ne\": [%ld, %ld, %ld, %ld], \"nb\": [%ld, %ld, %ld, %ld], \"t\": \"%s\"}",
+        t->ne[0], t->ne[1], t->ne[2], t->ne[3],
+        t->nb[0], t->nb[1], t->nb[2], t->nb[3],
+        ggml_type_name(t->type)
+    );
+}
 
 #ifdef  __cplusplus
 }

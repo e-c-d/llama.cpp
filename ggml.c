@@ -272,6 +272,9 @@ inline static void * ggml_calloc(size_t num, size_t size) {
 #include "ggml-opencl.h"
 #endif
 #elif defined(GGML_USE_OPENBLAS)
+#if defined(GGML_USE_CLBLAST) // allow usage of CLBlast alongside Accelerate functions
+#include "ggml-opencl.h"
+#endif
 #if defined(GGML_BLAS_USE_MKL)
 #include <mkl.h>
 #else
@@ -9945,8 +9948,8 @@ static bool ggml_compute_forward_mul_mat_use_blas(struct ggml_tensor * dst) {
     const struct ggml_tensor * src0 = dst->src[0];
     const struct ggml_tensor * src1 = dst->src[1];
 
-    //const int64_t ne00 = src0->ne[0];
-    //const int64_t ne01 = src0->ne[1];
+    const int64_t ne00 = src0->ne[0];
+    const int64_t ne01 = src0->ne[1];
 
     const int64_t ne10 = src1->ne[0];
 
@@ -14832,7 +14835,7 @@ static void ggml_compute_forward_cross_entropy_loss_back(
 
 /////////////////////////////////
 
-static void ggml_compute_forward(struct ggml_compute_params * params, struct ggml_tensor * tensor) {
+static void ggml_compute_forward_timed(struct ggml_compute_params * params, struct ggml_tensor * tensor) {
     GGML_ASSERT(params);
 
     if (tensor->op == GGML_OP_NONE) {
@@ -15186,6 +15189,35 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
                 GGML_ASSERT(false);
             } break;
     }
+}
+
+static void ggml_compute_forward(struct ggml_compute_params * params, struct ggml_tensor * tensor) {
+    bool x = params->type == GGML_TASK_COMPUTE && params->ith == 0;
+
+    switch (tensor->op) {
+        case GGML_OP_MUL_MAT:
+        case GGML_OP_OUT_PROD:
+            break;
+        default:
+            x = 0;
+    }
+
+    if (x) {
+        printf("{\".\": \"start\", \"th\": %ld, \"t\": %ld, \"op\": \"%s\", \"dst\": ",
+                (long)gettid(), ggml_time_us(), GGML_OP_NAME[tensor->op]);
+        print_json_tensor(tensor);
+        printf(", \"src0\": ");
+        print_json_tensor(tensor->src[0]);
+        printf(", \"src1\": ");
+        print_json_tensor(tensor->src[1]);
+        printf("}\n");
+    }
+
+    ggml_compute_forward_timed(params, tensor);
+
+    if (x)
+        printf("{\".\": \"end\", \"th\": %ld, \"t\": %ld}\n",
+                (long)gettid(), ggml_time_us());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
