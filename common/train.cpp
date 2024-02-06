@@ -850,6 +850,33 @@ size_t tokenize_file(
 
     f.read_raw(buf.data(), f.size);
 
+    if (buf.size() >= 4 &&
+        buf[0] == 255 && buf[1] == 255 && buf[2] == 255 && buf[3] == 255) {
+        // raw tokens encoded as big-endian uint32_t. the -1 token is sample delimiter,
+        // and the file must end with a sample delimiter.
+        // in other words, something like [-1, 12, 34, 56, -1, 78, 89, -1].
+        out_samples_begin.push_back(0);
+        for (size_t i = 4; i < buf.size(); i += 4) {
+            uint32_t token = 0;
+            token += (uint32_t)buf[i + 0] << 24;
+            token += (uint32_t)buf[i + 1] << 16;
+            token += (uint32_t)buf[i + 2] << 8;
+            token += (uint32_t)buf[i + 3] << 0;
+            if (token == (uint32_t)-1) {
+                // this is a start position
+                size_t pos = out_tokens.size();
+                size_t sample_size = pos - out_samples_begin.back();
+                GGML_ASSERT(sample_size <= context_length);
+                out_samples_size.push_back(sample_size);
+                out_samples_begin.push_back(pos);
+            } else {
+                out_tokens.push_back(token);
+            }
+            out_samples_begin.pop_back();
+        }
+        return out_tokens.size();
+    }
+
     std::vector<int> utf8_units;
     std::vector<int> utf8_nunits;
     utf8_units.resize(buf.size());
